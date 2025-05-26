@@ -2,12 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { ref, set, onValue } from "firebase/database";
 import { db } from "../firebase";
 
-const API_KEY = "AIzaSyDEZtFHGx4RgQdXMwlb0W_irbysMScEePk"
-
+const API_KEY = "AIzaSyDEZtFHGx4RgQdXMwlb0W_irbysMScEePk";
 
 export default function MusicPlayer({ roomId }) {
   const playerRef = useRef(null);
   const [currentVideoId, setCurrentVideoId] = useState(null);
+  const [currentTitle, setCurrentTitle] = useState("");
   const [input, setInput] = useState("");
   const [results, setResults] = useState([]);
 
@@ -49,22 +49,23 @@ export default function MusicPlayer({ roomId }) {
     }
   }, [currentVideoId]);
 
-  // Sync currentVideoId from Firebase
+  // Sync currentVideoId and title from Firebase
   useEffect(() => {
     const videoRef = ref(db, `rooms/${roomId}/currentSong`);
     onValue(videoRef, (snapshot) => {
-      const videoId = snapshot.val();
-      if (videoId !== currentVideoId) {
-        setCurrentVideoId(videoId);
-        if (playerRef.current && videoId) {
-          playerRef.current.loadVideoById(videoId);
+      const data = snapshot.val();
+      if (data?.videoId && data.videoId !== currentVideoId) {
+        setCurrentVideoId(data.videoId);
+        setCurrentTitle(data.title || "Unknown");
+        if (playerRef.current) {
+          playerRef.current.loadVideoById(data.videoId);
         }
       }
     });
   }, [roomId, currentVideoId]);
 
   function onPlayerStateChange(event) {
-    // Optional: sync play/pause state if needed
+    // Optional: handle buffering/play/pause etc
   }
 
   async function searchYouTube() {
@@ -78,8 +79,11 @@ export default function MusicPlayer({ roomId }) {
     setResults(data.items || []);
   }
 
-  function playVideo(videoId) {
-    set(ref(db, `rooms/${roomId}/currentSong`), videoId);
+  function playVideo(videoId, title) {
+    set(ref(db, `rooms/${roomId}/currentSong`), {
+      videoId,
+      title,
+    });
     setResults([]);
     setInput("");
   }
@@ -97,13 +101,23 @@ export default function MusicPlayer({ roomId }) {
       />
       <button onClick={searchYouTube}>Search</button>
 
+      {currentVideoId && (
+        <div style={{ marginTop: "10px" }}>
+          <strong>Now Playing:</strong> {currentTitle}
+        </div>
+      )}
+
       {results.length > 0 && (
         <div style={{ marginTop: "10px" }}>
           <h4>Search Results:</h4>
           {results.map((item) => (
             <div key={item.id.videoId} style={{ marginBottom: "8px" }}>
               <span>{item.snippet.title}</span>
-              <button onClick={() => playVideo(item.id.videoId)}>Play</button>
+              <button
+                onClick={() => playVideo(item.id.videoId, item.snippet.title)}
+              >
+                Play
+              </button>
             </div>
           ))}
         </div>

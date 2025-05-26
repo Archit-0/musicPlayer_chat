@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { ref, push, onChildAdded } from "firebase/database";
 import { db } from "../firebase";
 
-export default function Chat({ roomId }) {
+export default function Chat({ roomId, username }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
@@ -28,6 +28,7 @@ export default function Chat({ roomId }) {
     const messagesRef = ref(db, `rooms/${roomId}/chat`);
     push(messagesRef, {
       text: input,
+      username, // Save username with message
       timestamp: Date.now(),
     });
     setInput("");
@@ -42,6 +43,7 @@ export default function Chat({ roomId }) {
       <div className="messages">
         {messages.map((msg, i) => (
           <div key={i} className="message">
+            <strong>{msg.username || "Guest"}: </strong>
             {msg.text}
           </div>
         ))}
